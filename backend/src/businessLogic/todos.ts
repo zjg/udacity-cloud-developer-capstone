@@ -41,6 +41,16 @@ export async function getTodosForUser(userId: string)
     return todoAccess.getTodosForUser(userId)
 }
 
+export async function getPublicTodosForOtherUsers(userId: string)
+    : Promise<TodoItem[]>
+{
+    // check if user exists
+
+    logger.info(`getting all public todos for users other than ${userId}`)
+
+    return todoAccess.getPublicTodosForOtherUsers(userId)
+}
+
 export async function getSingleTodo(userId: string, todoId: string)
     : Promise<TodoItem>
 {

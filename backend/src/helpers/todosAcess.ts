@@ -10,6 +10,7 @@ export class TodoAccess {
     constructor(
         private readonly docClient: DocumentClient = createDynamoDBClient(),
         private readonly todoTable = process.env.TODOS_TABLE,
+        private readonly todoTablePublicIndex = process.env.TODOS_TABLE_PUBLIC_INDEX,
     ) { }
 
     async createTodo(item: TodoItem)
@@ -54,6 +55,24 @@ export class TodoAccess {
         return result.Items as TodoItem[]
     }
 
+    async getPublicTodosForOtherUsers(userId: string)
+        : Promise<TodoItem[]> {
+        logger.info(`get public todos for user ${userId}`)
+
+        const result = await this.docClient.query({
+            TableName: this.todoTable,
+            IndexName: this.todoTablePublicIndex,
+            KeyConditionExpression: 'public = :public',
+            FilterExpression: 'userId <> :userId',
+            ExpressionAttributeValues: {
+                ':userId': userId,
+                ':public': true
+            }
+        }).promise()
+
+        return result.Items as TodoItem[]
+    }
+    
     async updateTodoForUser(userId: string, todoId: string, data: TodoUpdate)
         : Promise<TodoItem> {
         logger.info(`update todo ${todoId} for user ${userId}`)

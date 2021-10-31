@@ -30,6 +30,7 @@ provider:
 
   environment:
     TODOS_TABLE: capstone-Todos-${self:provider.stage}
+    TODOS_TABLE_PUBLIC_INDEX: TodoTablePublicIndex
     TODOS_CREATED_AT_INDEX: CreatedAtIndex
     ATTACHMENT_S3_BUCKET: zjg-udacity-capstone-images-${self:provider.stage}
     SIGNED_URL_EXPIRATION: 300
@@ -66,6 +67,21 @@ functions:
         Action:
           - dynamodb:Query
         Resource: !GetAtt TodosTable.Arn
+
+  GetPublicTodos:
+    handler: src/lambda/http/getPublicTodos.handler
+    events:
+      - http:
+          method: get
+          path: publicTodos
+          cors: true
+          authorizer: Auth
+    iamRoleStatementsInherit: true
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamodb:Query
+        Resource: !Sub '${TodosTable.Arn}/index/*'
 
   GetSingleTodo:
     handler: src/lambda/http/getSingleTodo.handler
@@ -174,13 +190,26 @@ resources:
             AttributeType: S
           - AttributeName: todoId
             AttributeType: S
+          - AttributeName: public
+            AttributeType: B
         KeySchema:
           - AttributeName: userId
             KeyType: HASH
           - AttributeName: todoId
             KeyType: RANGE
+          - AttributeName: public
+            KeyType: RANGE
         BillingMode: PAY_PER_REQUEST
         TableName: ${self:provider.environment.TODOS_TABLE}
+        GlobalSecondaryIndexes:
+          - IndexName: ${self:provider.environment.TODOS_TABLE_PUBLIC_INDEX}
+            KeySchema:
+              - AttributeName: public
+                KeyType: HASH
+              - AttributeName: userId
+                KeyType: RANGE
+            Projection:
+              ProjectionType: ALL
 
     AttachmentsBucket:
       Type: AWS::S3::Bucket
