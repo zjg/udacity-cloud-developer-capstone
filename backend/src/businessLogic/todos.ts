@@ -41,6 +41,16 @@ export async function getTodosForUser(userId: string)
     return todoAccess.getTodosForUser(userId)
 }
 
+export async function getSingleTodo(userId: string, todoId: string)
+    : Promise<TodoItem>
+{
+    // check if user exists
+
+    logger.info(`getting todo ${todoId} for user ${userId}`)
+
+    return todoAccess.getSingleTodo(userId, todoId)
+}
+
 export async function updateTodo(userId: string, todoId: string, request: UpdateTodoRequest)
     : Promise<TodoItem>
 {

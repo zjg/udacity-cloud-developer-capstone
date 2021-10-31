@@ -67,6 +67,21 @@ functions:
           - dynamodb:Query
         Resource: !GetAtt TodosTable.Arn
 
+  GetSingleTodo:
+    handler: src/lambda/http/getSingleTodo.handler
+    events:
+      - http:
+          method: get
+          path: todos/{todoId}
+          cors: true
+          authorizer: Auth
+    iamRoleStatementsInherit: true
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamodb:GetItem
+        Resource: !GetAtt TodosTable.Arn
+
   CreateTodo:
     handler: src/lambda/http/createTodo.handler
     events:
