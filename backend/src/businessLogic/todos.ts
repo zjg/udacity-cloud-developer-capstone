@@ -24,6 +24,7 @@ export async function createTodo(userId: string, request: CreateTodoRequest)
         todoId: uuid.v4(),
         createdAt: new Date().toISOString(),
         done: false,
+        public: false,
         ...request
     }
 

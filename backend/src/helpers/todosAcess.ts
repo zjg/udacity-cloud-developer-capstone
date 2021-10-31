@@ -49,16 +49,18 @@ export class TodoAccess {
                 todoId: todoId,
                 userId: userId,
             },
-            UpdateExpression: "SET #N=:name, #DD=:dueDate, #D=:done",
+            UpdateExpression: "SET #N=:name, #DD=:dueDate, #D=:done, #P=:public",
             ExpressionAttributeNames: {
                 "#N": "name",
                 "#DD": "dueDate",
                 "#D": "done",
+                "#P": "public",
             },
             ExpressionAttributeValues: {
                 ":name": data.name,
                 ":dueDate": data.dueDate,
                 ":done": data.done,
+                ":public": data.public,
             },
             ReturnValues: "ALL_NEW",
         }).promise()
