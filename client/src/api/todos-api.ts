@@ -27,7 +27,30 @@ export async function getTodos(idToken: string): Promise<Todo[]> {
     },
   })
   console.log('Todos:', response.data)
-  return response.data.items
+  return response.data.items.map((item: any) => {
+    return {
+      isOwned: true,
+      ...item
+    }
+  })
+}
+
+export async function getPublicTodos(idToken: string): Promise<Todo[]> {
+  console.log('Fetching public todos')
+
+  const response = await Axios.get(`${apiEndpoint}/publicTodos`, {
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${idToken}`
+    },
+  })
+  console.log('Public Todos:', response.data)
+  return response.data.items.map((item: any) => {
+    return {
+      isOwned: false,
+      ...item
+    }
+  })
 }
 
 export async function createTodo(
