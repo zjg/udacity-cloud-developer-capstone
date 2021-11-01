@@ -1,5 +1,6 @@
 export interface Todo {
   todoId: string
+  userId: string
   isOwned: boolean
   createdAt: string
   name: string

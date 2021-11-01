@@ -14,7 +14,7 @@ import {
   Loader
 } from 'semantic-ui-react'
 
-import { createTodo, deleteTodo, getPublicTodos, getTodos, patchTodo } from '../api/todos-api'
+import { createTodo, deleteTodo, getPublicTodos, getTodos, patchTodo, patchPublicTodo } from '../api/todos-api'
 import Auth from '../auth/Auth'
 import { Todo } from '../types/Todo'
 
@@ -78,12 +78,19 @@ export class Todos extends React.PureComponent<TodosProps, TodosState> {
         alert('todo not in state!')
         return
       }
-      await patchTodo(this.props.auth.getIdToken(), todo.todoId, {
-        name: todo.name,
-        dueDate: todo.dueDate,
-        done: !todo.done,
-        public: todo.public,
-      })
+      if (todo.isOwned) {
+        await patchTodo(this.props.auth.getIdToken(), todo.todoId, {
+          name: todo.name,
+          dueDate: todo.dueDate,
+          done: !todo.done,
+          public: todo.public,
+        })
+      } else {
+        await patchPublicTodo(this.props.auth.getIdToken(), todo.todoId, {
+          todoUserId: todo.userId,
+          done: !todo.done,
+        })
+      }
       this.setState({
         todos: this.state.todos.setIn([todo.todoId, 'done'], !todo.done)
       })

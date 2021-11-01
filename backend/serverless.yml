@@ -134,6 +134,24 @@ functions:
           - dynamodb:UpdateItem
         Resource: !GetAtt TodosTable.Arn
 
+  UpdatePublicTodo:
+    handler: src/lambda/http/updatePublicTodo.handler
+    events:
+      - http:
+          method: patch
+          path: publicTodos/{todoId}
+          cors: true
+          authorizer: Auth
+          request:
+            schemas:
+              application/json: ${file(models/update-public-todo-model.json)}
+    iamRoleStatementsInherit: true
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamodb:UpdateItem
+        Resource: !GetAtt TodosTable.Arn
+
   DeleteTodo:
     handler: src/lambda/http/deleteTodo.handler
     events:

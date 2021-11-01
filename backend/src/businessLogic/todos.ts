@@ -2,8 +2,10 @@ import { TodoAccess } from '../helpers/todosAcess'
 import { AttachmentUtils } from '../helpers/attachmentUtils';
 import { TodoItem } from '../models/TodoItem'
 import { TodoUpdate } from '../models/TodoUpdate'
+import { PublicTodoUpdate } from '../models/PublicTodoUpdate'
 import { CreateTodoRequest } from '../requests/CreateTodoRequest'
 import { UpdateTodoRequest } from '../requests/UpdateTodoRequest'
+import { UpdatePublicTodoRequest } from '../requests/UpdatePublicTodoRequest'
 import { createLogger } from '../utils/logger'
 import * as uuid from 'uuid'
 // import * as createError from 'http-errors'
@@ -70,6 +72,14 @@ export async function updateTodo(userId: string, todoId: string, request: Update
     const todoUpdate = request as TodoUpdate
 
     return todoAccess.updateTodoForUser(userId, todoId, todoUpdate)
+}
+
+export async function updatePublicTodo(userId: string, todoId: string, request: UpdatePublicTodoRequest)
+    : Promise<TodoItem>
+{
+    const todoUpdate = request as PublicTodoUpdate
+
+    return todoAccess.updatePublicTodo(userId, todoId, todoUpdate)
 }
 
 export async function deleteTodo(userId: string, todoId: string)

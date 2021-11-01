@@ -3,6 +3,7 @@ import { DocumentClient } from 'aws-sdk/clients/dynamodb'
 import { createLogger } from '../utils/logger'
 import { TodoItem } from '../models/TodoItem'
 import { TodoUpdate } from '../models/TodoUpdate';
+import { PublicTodoUpdate } from '../models/PublicTodoUpdate';
 
 const logger = createLogger('TodoAccess')
 
@@ -137,6 +138,32 @@ export class TodoAccess {
             UpdateExpression: updateExpr,
             ExpressionAttributeNames: exprAttrNames,
             ExpressionAttributeValues: exprAttrValues,
+            ReturnValues: "ALL_NEW",
+        }).promise()
+
+        return convertItemFromStorage(result.Attributes as TodoItem_storage)
+    }
+
+    async updatePublicTodo(userId: string, todoId: string, data: PublicTodoUpdate)
+        : Promise<TodoItem> {
+        logger.info(`update public todo ${todoId} from user ${userId}`)
+
+        const result = await this.docClient.update({
+            TableName: this.todoTable,
+            Key: {
+                todoId: todoId,
+                userId: data.todoUserId,
+            },
+            // ensures that the todo actually exists
+            ConditionExpression: "todoId = :todoId",
+            UpdateExpression: "SET #D=:done",
+            ExpressionAttributeNames: {
+                "#D": "done",
+            },
+            ExpressionAttributeValues: {
+                ":todoId": todoId,
+                ":done": data.done,
+            },
             ReturnValues: "ALL_NEW",
         }).promise()
 

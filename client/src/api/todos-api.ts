@@ -3,6 +3,7 @@ import { Todo } from '../types/Todo';
 import { CreateTodoRequest } from '../types/CreateTodoRequest';
 import Axios from 'axios'
 import { UpdateTodoRequest } from '../types/UpdateTodoRequest';
+import { UpdatePublicTodoRequest } from '../types/UpdatePublicTodoRequest';
 
 export async function getSingleTodo(idToken: string, todoId: string) : Promise<Todo> {
   console.log(`Fetching single todo: ${todoId}`)
@@ -74,6 +75,19 @@ export async function patchTodo(
   updatedTodo: UpdateTodoRequest
 ): Promise<void> {
   await Axios.patch(`${apiEndpoint}/todos/${todoId}`, JSON.stringify(updatedTodo), {
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${idToken}`
+    }
+  })
+}
+
+export async function patchPublicTodo(
+  idToken: string,
+  todoId: string,
+  updatedTodo: UpdatePublicTodoRequest
+): Promise<void> {
+  await Axios.patch(`${apiEndpoint}/publicTodos/${todoId}`, JSON.stringify(updatedTodo), {
     headers: {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${idToken}`
