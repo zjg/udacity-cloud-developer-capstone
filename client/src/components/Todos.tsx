@@ -1,6 +1,6 @@
 import dateFormat from 'dateformat'
 import { History } from 'history'
-import update from 'immutability-helper'
+import { OrderedMap, Seq } from 'immutable'
 import * as React from 'react'
 import {
   Button,
@@ -24,16 +24,14 @@ interface TodosProps {
 }
 
 interface TodosState {
-  todos: Todo[]
-  publicTodos: Todo[]
+  todos: OrderedMap<string, Todo>
   newTodoName: string
   loadingTodos: boolean
 }
 
 export class Todos extends React.PureComponent<TodosProps, TodosState> {
   state: TodosState = {
-    todos: [],
-    publicTodos: [],
+    todos: OrderedMap<string, Todo>(),
     newTodoName: '',
     loadingTodos: true,
   }
@@ -54,7 +52,7 @@ export class Todos extends React.PureComponent<TodosProps, TodosState> {
         dueDate
       })
       this.setState({
-        todos: [...this.state.todos, newTodo],
+        todos: this.state.todos.set(newTodo.todoId, newTodo),
         newTodoName: ''
       })
     } catch {
@@ -66,16 +64,20 @@ export class Todos extends React.PureComponent<TodosProps, TodosState> {
     try {
       await deleteTodo(this.props.auth.getIdToken(), todoId)
       this.setState({
-        todos: this.state.todos.filter(todo => todo.todoId !== todoId)
+        todos: this.state.todos.delete(todoId)
       })
     } catch {
       alert('Todo deletion failed')
     }
   }
 
-  onTodoCheck = async (pos: number) => {
+  onTodoCheck = async (todoId: string) => {
     try {
-      const todo = this.state.todos[pos]
+      let todo = this.state.todos.get(todoId, {} as Todo)
+      if (todo.todoId !== todoId) {
+        alert('todo not in state!')
+        return
+      }
       await patchTodo(this.props.auth.getIdToken(), todo.todoId, {
         name: todo.name,
         dueDate: todo.dueDate,
@@ -83,9 +85,7 @@ export class Todos extends React.PureComponent<TodosProps, TodosState> {
         public: todo.public,
       })
       this.setState({
-        todos: update(this.state.todos, {
-          [pos]: { done: { $set: !todo.done } }
-        })
+        todos: this.state.todos.setIn([todo.todoId, 'done'], !todo.done)
       })
     } catch {
       alert('Todo done toggle failed')
@@ -99,8 +99,11 @@ export class Todos extends React.PureComponent<TodosProps, TodosState> {
         getTodos(idToken), getPublicTodos(idToken)
       ])
       this.setState({
-        todos: todos,
-        publicTodos: publicTodos,
+        todos: this.state.todos.merge(
+            publicTodos.map(item => [item.todoId, item])
+          ).merge(
+            todos.map(item => [item.todoId, item])
+          ),
         loadingTodos: false
       })
     } catch (e) {
@@ -172,25 +175,25 @@ export class Todos extends React.PureComponent<TodosProps, TodosState> {
             <Divider />
           </Grid.Column>
         </Grid.Row>
-        {this.renderTodoGrid(this.state.todos)}
+        {this.renderTodoGrid(this.state.todos.toKeyedSeq().filter(todo => todo.isOwned))}
         <Grid.Row>
           <Grid.Column width={16} textAlign="center">Public TODOs</Grid.Column>
           <Grid.Column width={16}>
             <Divider />
           </Grid.Column>
         </Grid.Row>
-        {this.renderTodoGrid(this.state.publicTodos)}
+        {this.renderTodoGrid(this.state.todos.toKeyedSeq().filter(todo => !todo.isOwned))}
       </Grid>
     )
   }
 
-  renderTodoGrid = (todos: Todo[]) => {
-    return todos.map((todo, pos) => {
+  renderTodoGrid = (todos: Seq<string, Todo>) => {
+    return todos.map(todo => {
       return (
         <Grid.Row key={todo.todoId}>
           <Grid.Column width={1} verticalAlign="middle">
             <Checkbox
-              onChange={() => this.onTodoCheck(pos)}
+              onChange={() => this.onTodoCheck(todo.todoId)}
               checked={todo.done}
             />
           </Grid.Column>
@@ -230,7 +233,7 @@ export class Todos extends React.PureComponent<TodosProps, TodosState> {
           </Grid.Column>
         </Grid.Row>
       )
-    })
+    }).valueSeq().toArray()
   }
 
   calculateDueDate(): string {

@@ -6,6 +6,29 @@ import { TodoUpdate } from '../models/TodoUpdate';
 
 const logger = createLogger('TodoAccess')
 
+// generate item with 'public' attribute as a sparse index
+// see: https://stackoverflow.com/a/28284261
+type TodoItem_without_public = {
+    [K in keyof TodoItem as Exclude<K, "public">]: TodoItem[K]
+}
+type TodoItem_storage = TodoItem_without_public & {
+    public?: string
+}
+function convertItemToStorage(item: TodoItem): TodoItem_storage {
+    const storageItem: TodoItem_storage = {
+        ...(item as TodoItem_without_public),
+        public: (item.public) ? "x" : undefined,
+    }
+    return storageItem
+}
+function convertItemFromStorage(storageItem: TodoItem_storage): TodoItem {
+    const item: TodoItem = {
+        ...(storageItem as TodoItem_without_public),
+        public: (storageItem.public === undefined) ? false : true,
+    }
+    return item
+}
+
 export class TodoAccess {
     constructor(
         private readonly docClient: DocumentClient = createDynamoDBClient(),
@@ -19,7 +42,7 @@ export class TodoAccess {
 
         await this.docClient.put({
             TableName: this.todoTable,
-            Item: item
+            Item: convertItemToStorage(item),
         }).promise()
 
         return item
@@ -37,7 +60,7 @@ export class TodoAccess {
             }
         }).promise()
 
-        return result.Item as TodoItem
+        return convertItemFromStorage(result.Item as TodoItem_storage)
     }
 
     async getTodosForUser(userId: string)
@@ -52,7 +75,7 @@ export class TodoAccess {
             }
         }).promise()
 
-        return result.Items as TodoItem[]
+        return result.Items.map(convertItemFromStorage)
     }
 
     async getPublicTodosForOtherUsers(userId: string)
@@ -62,20 +85,46 @@ export class TodoAccess {
         const result = await this.docClient.query({
             TableName: this.todoTable,
             IndexName: this.todoTablePublicIndex,
-            KeyConditionExpression: 'public = :public',
-            FilterExpression: 'userId <> :userId',
+            KeyConditionExpression: '#P = :public',
+            FilterExpression: '#U <> :userId',
             ExpressionAttributeValues: {
                 ':userId': userId,
-                ':public': true
+                ':public': 'x'
+            },
+            ExpressionAttributeNames: {
+                "#P": "public",
+                "#U": "userId",
             }
         }).promise()
 
-        return result.Items as TodoItem[]
+        return result.Items.map(convertItemFromStorage)
     }
     
     async updateTodoForUser(userId: string, todoId: string, data: TodoUpdate)
         : Promise<TodoItem> {
         logger.info(`update todo ${todoId} for user ${userId}`)
+
+        let updateExpr = "SET #N=:name, #DD=:dueDate, #D=:done"
+        let exprAttrValues = {
+            ":userId": userId,
+            ":name": data.name,
+            ":dueDate": data.dueDate,
+            ":done": data.done,
+            ":public": undefined,
+        }
+        let exprAttrNames = {
+            "#N": "name",
+            "#DD": "dueDate",
+            "#D": "done",
+            "#P": "public",
+        }
+
+        if (data.public) {
+            updateExpr += ", #P=:public"
+            exprAttrValues[":public"] = "x"
+        } else {
+            updateExpr += " REMOVE #P"
+        }
 
         const result = await this.docClient.update({
             TableName: this.todoTable,
@@ -83,24 +132,15 @@ export class TodoAccess {
                 todoId: todoId,
                 userId: userId,
             },
-            UpdateExpression: "SET #N=:name, #DD=:dueDate, #D=:done, #P=:public",
-            ExpressionAttributeNames: {
-                "#N": "name",
-                "#DD": "dueDate",
-                "#D": "done",
-                "#P": "public",
-            },
-            ExpressionAttributeValues: {
-                ":name": data.name,
-                ":dueDate": data.dueDate,
-                ":done": data.done,
-                ":public": data.public,
-            },
+            // ensures that only the owner can modify the todo
+            ConditionExpression: "userId = :userId",
+            UpdateExpression: updateExpr,
+            ExpressionAttributeNames: exprAttrNames,
+            ExpressionAttributeValues: exprAttrValues,
             ReturnValues: "ALL_NEW",
         }).promise()
 
-        const item = result.Attributes
-        return item as TodoItem
+        return convertItemFromStorage(result.Attributes as TodoItem_storage)
     }
 
     async setAttachmentUrl(userId: string, todoId: string, url: string)
@@ -123,8 +163,7 @@ export class TodoAccess {
             ReturnValues: "ALL_NEW",
         }).promise()
 
-        const item = result.Attributes
-        return item as TodoItem
+        return convertItemFromStorage(result.Attributes as TodoItem_storage)
     }
 
     async deleteTodoForUser(userId: string, todoId: string)
@@ -136,7 +175,7 @@ export class TodoAccess {
                 userId: userId,
             }
         }).promise()
-        return result.Attributes as TodoItem
+        return convertItemFromStorage(result.Attributes as TodoItem_storage)
     }
 }
 

@@ -44,7 +44,6 @@ export async function getPublicTodos(idToken: string): Promise<Todo[]> {
       'Authorization': `Bearer ${idToken}`
     },
   })
-  console.log('Public Todos:', response.data)
   return response.data.items.map((item: any) => {
     return {
       isOwned: false,
@@ -63,7 +62,10 @@ export async function createTodo(
       'Authorization': `Bearer ${idToken}`
     }
   })
-  return response.data.item
+  return {
+      isOwned: true,
+      ...response.data.item,
+  }
 }
 
 export async function patchTodo(
