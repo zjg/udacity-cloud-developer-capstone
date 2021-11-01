@@ -1,6 +1,6 @@
 org: zjg365
-app: capstone-todo-app
-service: capstone-todo-app
+app: capstone-todo-app-2
+service: capstone-todo-app-2
 
 plugins:
   - serverless-webpack
@@ -29,10 +29,10 @@ provider:
     apiGateway: true
 
   environment:
-    TODOS_TABLE: capstone-Todos-${self:provider.stage}
+    TODOS_TABLE: capstone-Todos-2-${self:provider.stage}
     TODOS_TABLE_PUBLIC_INDEX: TodoTablePublicIndex
     TODOS_CREATED_AT_INDEX: CreatedAtIndex
-    ATTACHMENT_S3_BUCKET: zjg-udacity-capstone-images-${self:provider.stage}
+    ATTACHMENT_S3_BUCKET: zjg-udacity-capstone-images-2-${self:provider.stage}
     SIGNED_URL_EXPIRATION: 300
 
   logs:
